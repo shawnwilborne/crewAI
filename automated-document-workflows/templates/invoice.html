@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Invoice {{ invoice_number }}</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+            line-height: 1.6;
+        }
+        
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #007bff;
+        }
+        
+        .company-info {
+            flex: 1;
+        }
+        
+        .company-name {
+            font-size: 24px;
+            font-weight: bold;
+            color: #007bff;
+            margin-bottom: 10px;
+        }
+        
+        .invoice-info {
+            text-align: right;
+            flex: 1;
+        }
+        
+        .invoice-title {
+            font-size: 32px;
+            font-weight: bold;
+            color: #007bff;
+            margin-bottom: 10px;
+        }
+        
+        .invoice-details {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 30px;
+        }
+        
+        .details-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+        
+        .details-row:last-child {
+            margin-bottom: 0;
+        }
+        
+        .bill-to {
+            margin-bottom: 30px;
+        }
+        
+        .section-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #007bff;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #dee2e6;
+            padding-bottom: 5px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+        }
+        
+        th, td {
+            text-align: left;
+            padding: 12px;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        th {
+            background-color: #007bff;
+            color: white;
+            font-weight: bold;
+        }
+        
+        tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+        
+        .amount {
+            text-align: right;
+        }
+        
+        .totals {
+            width: 300px;
+            margin-left: auto;
+            margin-top: 20px;
+        }
+        
+        .totals table {
+            margin-bottom: 0;
+        }
+        
+        .totals th, .totals td {
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        .total-row {
+            font-weight: bold;
+            font-size: 16px;
+            background-color: #007bff !important;
+            color: white;
+        }
+        
+        .payment-terms {
+            background-color: #fff3cd;
+            padding: 15px;
+            border-radius: 5px;
+            border-left: 4px solid #ffc107;
+            margin-top: 30px;
+        }
+        
+        .footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #dee2e6;
+            text-align: center;
+            color: #6c757d;
+            font-size: 12px;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        
+        .status-draft {
+            background-color: #6c757d;
+            color: white;
+        }
+        
+        .status-sent {
+            background-color: #17a2b8;
+            color: white;
+        }
+        
+        .status-paid {
+            background-color: #28a745;
+            color: white;
+        }
+        
+        .status-overdue {
+            background-color: #dc3545;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="company-info">
+            <div class="company-name">{{ company_name | default("Your Company Name") }}</div>
+            <div>{{ company_address | default("123 Business Street") }}</div>
+            <div>{{ company_city_state | default("City, State 12345") }}</div>
+            <div>{{ company_phone | default("(555) 123-4567") }}</div>
+            <div>{{ company_email | default("info@company.com") }}</div>
+        </div>
+        
+        <div class="invoice-info">
+            <div class="invoice-title">INVOICE</div>
+            <div class="status-badge status-{{ status | default('draft') | lower }}">
+                {{ status | default('Draft') }}
+            </div>
+        </div>
+    </div>
+    
+    <div class="invoice-details">
+        <div class="details-row">
+            <strong>Invoice Number:</strong>
+            <span>{{ invoice_number | default("#INV-001") }}</span>
+        </div>
+        <div class="details-row">
+            <strong>Invoice Date:</strong>
+            <span>{{ invoice_date | default(date | strftime('%B %d, %Y')) }}</span>
+        </div>
+        <div class="details-row">
+            <strong>Due Date:</strong>
+            <span>{{ due_date | default("Due on receipt") }}</span>
+        </div>
+        {% if purchase_order %}
+        <div class="details-row">
+            <strong>Purchase Order:</strong>
+            <span>{{ purchase_order }}</span>
+        </div>
+        {% endif %}
+    </div>
+    
+    <div class="bill-to">
+        <div class="section-title">Bill To:</div>
+        <div><strong>{{ customer_name | default("Customer Name") }}</strong></div>
+        <div>{{ customer_address | default("Customer Address") }}</div>
+        {% if customer_city_state %}
+        <div>{{ customer_city_state }}</div>
+        {% endif %}
+        {% if customer_email %}
+        <div>{{ customer_email }}</div>
+        {% endif %}
+    </div>
+    
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 50%">Description</th>
+                <th style="width: 15%">Quantity</th>
+                <th style="width: 15%">Rate</th>
+                <th style="width: 20%" class="amount">Amount</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in items | default([]) %}
+            <tr>
+                <td>
+                    <strong>{{ item.description | default("Service/Product") }}</strong>
+                    {% if item.details %}
+                    <br><small style="color: #6c757d;">{{ item.details }}</small>
+                    {% endif %}
+                </td>
+                <td>{{ item.quantity | default(1) }}</td>
+                <td>${{ "%.2f" | format(item.rate | default(0) | float) }}</td>
+                <td class="amount">${{ "%.2f" | format((item.quantity | default(1) | float) * (item.rate | default(0) | float)) }}</td>
+            </tr>
+            {% endfor %}
+            
+            {% if not items %}
+            <!-- Sample items if no data provided -->
+            <tr>
+                <td>
+                    <strong>Professional Services</strong>
+                    <br><small style="color: #6c757d;">Document processing and analysis</small>
+                </td>
+                <td>10</td>
+                <td>$150.00</td>
+                <td class="amount">$1,500.00</td>
+            </tr>
+            <tr>
+                <td>
+                    <strong>OCR Processing</strong>
+                    <br><small style="color: #6c757d;">Text extraction and digitization</small>
+                </td>
+                <td>50</td>
+                <td>$5.00</td>
+                <td class="amount">$250.00</td>
+            </tr>
+            {% endif %}
+        </tbody>
+    </table>
+    
+    <div class="totals">
+        <table>
+            <tr>
+                <td><strong>Subtotal:</strong></td>
+                <td class="amount"><strong>${{ "%.2f" | format(subtotal | default(1750.00) | float) }}</strong></td>
+            </tr>
+            {% if tax_rate %}
+            <tr>
+                <td>Tax ({{ tax_rate }}%):</td>
+                <td class="amount">${{ "%.2f" | format((subtotal | default(1750.00) | float) * (tax_rate | float / 100)) }}</td>
+            </tr>
+            {% endif %}
+            {% if discount %}
+            <tr>
+                <td>Discount:</td>
+                <td class="amount">-${{ "%.2f" | format(discount | float) }}</td>
+            </tr>
+            {% endif %}
+            <tr class="total-row">
+                <td><strong>Total:</strong></td>
+                <td class="amount"><strong>${{ "%.2f" | format(total | default(1750.00) | float) }}</strong></td>
+            </tr>
+        </table>
+    </div>
+    
+    {% if payment_terms or notes %}
+    <div class="payment-terms">
+        {% if payment_terms %}
+        <div><strong>Payment Terms:</strong></div>
+        <div>{{ payment_terms | default("Net 30 days") }}</div>
+        {% endif %}
+        
+        {% if notes %}
+        <div style="margin-top: 15px;"><strong>Notes:</strong></div>
+        <div>{{ notes }}</div>
+        {% endif %}
+    </div>
+    {% endif %}
+    
+    <div class="footer">
+        <p>Thank you for your business!</p>
+        <p>Generated by Automated Document Workflows on {{ date | strftime('%B %d, %Y at %I:%M %p') }}</p>
+    </div>
+</body>
+</html>

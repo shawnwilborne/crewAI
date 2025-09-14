@@ -1,0 +1,394 @@
+# Automated Document Workflows - Routing Rules Configuration
+# 
+# This file defines routing rules for automatic document classification,
+# renaming, and delivery. Rules are evaluated in priority order.
+#
+# Rule Structure:
+# - name: Unique rule identifier
+# - description: Human-readable description
+# - priority: Higher numbers = higher priority (evaluated first)
+# - enabled: Whether rule is active (true/false)
+# - conditions: List of conditions that must ALL match (AND logic)
+# - actions: What to do when rule matches
+
+rules:
+  # Invoice Processing Rules
+  - name: "Invoice Processing"
+    description: "Route invoices to accounting folder with standardized naming"
+    priority: 100
+    enabled: true
+    conditions:
+      - type: "keywords"
+        value: ["invoice", "billing", "payment due", "amount due", "bill to"]
+        operator: "any"
+        case_sensitive: false
+      - type: "filename_regex"
+        value: ".*(?i)(invoice|bill|billing).*"
+        case_sensitive: false
+    actions:
+      destination: "s3://document-bucket/accounting/invoices/{date_yyyy}/{date_mm}/"
+      rename_template: "INV_{date_yyyy_mm_dd}_{counter:6}"
+      bates_prefix: "INV"
+      continue_matching: false
+
+  - name: "Vendor Invoice"
+    description: "Specialized routing for vendor invoices"
+    priority: 110
+    enabled: true
+    conditions:
+      - type: "keywords"
+        value: ["vendor", "supplier", "purchase order", "PO#"]
+        operator: "any"
+        case_sensitive: false
+      - type: "mime_type"
+        value: "application/pdf"
+        operator: "equals"
+    actions:
+      destination: "s3://document-bucket/accounting/vendor-invoices/{date_yyyy}/"
+      rename_template: "VENDOR_{date_yyyy_mm_dd}_{counter:4}"
+      bates_prefix: "VEN"
+
+  # Contract and Legal Document Rules
+  - name: "Legal Contracts"
+    description: "Route legal contracts and agreements"
+    priority: 90
+    enabled: true
+    conditions:
+      - type: "keywords"
+        value: ["contract", "agreement", "terms and conditions", "legal", "whereas"]
+        operator: "any"
+        case_sensitive: false
+      - type: "filename_regex"
+        value: ".*(?i)(contract|agreement|legal).*"
+    actions:
+      destination: "sftp://legal-server/contracts/{date_yyyy}/"
+      rename_template: "CONTRACT_{date_yyyy_mm_dd}_{counter:5}"
+      bates_prefix: "LEG"
+
+  - name: "Non-Disclosure Agreements"
+    description: "Route NDAs to legal folder"
+    priority: 95
+    enabled: true
+    conditions:
+      - type: "keywords"
+        value: ["non-disclosure", "nda", "confidentiality agreement"]
+        operator: "any"
+        case_sensitive: false
+    actions:
+      destination: "sftp://legal-server/ndas/{date_yyyy}/"
+      rename_template: "NDA_{date_yyyy_mm_dd}_{counter:4}"
+      bates_prefix: "NDA"
+
+  # Financial Documents
+  - name: "Bank Statements"
+    description: "Route bank statements to finance"
+    priority: 85
+    enabled: true
+    conditions:
+      - type: "keywords"
+        value: ["bank statement", "account balance", "transaction history", "deposit", "withdrawal"]
+        operator: "any"
+        case_sensitive: false
+      - type: "filename_contains"
+        value: "statement"
+        case_sensitive: false
+    actions:
+      destination: "s3://document-bucket/finance/bank-statements/{date_yyyy}/{date_mm}/"
+      rename_template: "STMT_{date_yyyy_mm_dd}_{counter:4}"
+      bates_prefix: "STMT"
+
+  - name: "Tax Documents"
+    description: "Route tax-related documents"
+    priority: 88
+    enabled: true
+    conditions:
+      - type: "keywords"
+        value: ["tax return", "1099", "w-2", "w2", "tax form", "irs", "tax year"]
+        operator: "any"
+        case_sensitive: false
+    actions:
+      destination: "s3://document-bucket/finance/tax-documents/{date_yyyy}/"
+      rename_template: "TAX_{date_yyyy_mm_dd}_{counter:4}"
+      bates_prefix: "TAX"
+
+  # HR Documents
+  - name: "Employee Documents"
+    description: "Route HR and employee documents"
+    priority: 80
+    enabled: true
+    conditions:
+      - type: "keywords"
+        value: ["employee", "payroll", "benefits", "performance review", "job application"]
+        operator: "any"
+        case_sensitive: false
+      - type: "filename_regex"
+        value: ".*(?i)(hr|human.resources|employee|payroll).*"
+    actions:
+      destination: "sftp://hr-server/employee-docs/{date_yyyy}/"
+      rename_template: "HR_{date_yyyy_mm_dd}_{counter:5}"
+      bates_prefix: "HR"
+
+  - name: "Resume and Applications"
+    description: "Route job applications and resumes"
+    priority: 82
+    enabled: true
+    conditions:
+      - type: "keywords"
+        value: ["resume", "cv", "curriculum vitae", "job application", "cover letter"]
+        operator: "any"
+        case_sensitive: false
+    actions:
+      destination: "sftp://hr-server/applications/{date_yyyy}/{date_mm}/"
+      rename_template: "APP_{date_yyyy_mm_dd}_{counter:4}"
+      bates_prefix: "APP"
+
+  # Insurance Documents
+  - name: "Insurance Claims"
+    description: "Route insurance claims and documents"
+    priority: 75
+    enabled: true
+    conditions:
+      - type: "keywords"
+        value: ["insurance claim", "claim number", "policy number", "coverage", "deductible"]
+        operator: "any"
+        case_sensitive: false
+      - type: "filename_contains"
+        value: "claim"
+        case_sensitive: false
+    actions:
+      destination: "s3://document-bucket/insurance/claims/{date_yyyy}/"
+      rename_template: "CLAIM_{date_yyyy_mm_dd}_{counter:6}"
+      bates_prefix: "INS"
+
+  # Medical Documents
+  - name: "Medical Records"
+    description: "Route medical records and healthcare documents"
+    priority: 70
+    enabled: true
+    conditions:
+      - type: "keywords"
+        value: ["medical record", "patient", "diagnosis", "prescription", "healthcare", "hipaa"]
+        operator: "any"
+        case_sensitive: false
+    actions:
+      destination: "sftp://medical-server/records/{date_yyyy}/{date_mm}/"
+      rename_template: "MED_{date_yyyy_mm_dd}_{counter:6}"
+      bates_prefix: "MED"
+
+  # Purchase Orders and Procurement
+  - name: "Purchase Orders"
+    description: "Route purchase orders and procurement documents"
+    priority: 65
+    enabled: true
+    conditions:
+      - type: "keywords"
+        value: ["purchase order", "po number", "procurement", "requisition", "vendor quote"]
+        operator: "any"
+        case_sensitive: false
+      - type: "filename_regex"
+        value: ".*(?i)(po|purchase.order).*"
+    actions:
+      destination: "s3://document-bucket/procurement/purchase-orders/{date_yyyy}/"
+      rename_template: "PO_{date_yyyy_mm_dd}_{counter:5}"
+      bates_prefix: "PO"
+
+  # Reports and Analytics
+  - name: "Business Reports"
+    description: "Route business reports and analytics"
+    priority: 60
+    enabled: true
+    conditions:
+      - type: "keywords"
+        value: ["quarterly report", "monthly report", "annual report", "business analysis", "performance metrics"]
+        operator: "any"
+        case_sensitive: false
+      - type: "filename_contains"
+        value: "report"
+        case_sensitive: false
+    actions:
+      destination: "s3://document-bucket/reports/{date_yyyy}/{date_mm}/"
+      rename_template: "RPT_{date_yyyy_mm_dd}_{counter:4}"
+      bates_prefix: "RPT"
+
+  # Forms and Applications
+  - name: "Application Forms"
+    description: "Route various application and request forms"
+    priority: 55
+    enabled: true
+    conditions:
+      - type: "keywords"
+        value: ["application", "request form", "submission", "form", "questionnaire"]
+        operator: "any"
+        case_sensitive: false
+      - type: "filename_regex"
+        value: ".*(?i)(form|application).*"
+    actions:
+      destination: "s3://document-bucket/forms/{date_yyyy}/{date_mm}/"
+      rename_template: "FORM_{date_yyyy_mm_dd}_{counter:4}"
+      bates_prefix: "FORM"
+
+  # Receipts and Expenses
+  - name: "Expense Receipts"
+    description: "Route expense receipts for reimbursement"
+    priority: 50
+    enabled: true
+    conditions:
+      - type: "keywords"
+        value: ["receipt", "expense", "reimbursement", "paid", "total amount"]
+        operator: "any"
+        case_sensitive: false
+      - type: "file_size"
+        value: 5242880  # 5MB
+        operator: "less_than"
+    actions:
+      destination: "s3://document-bucket/expenses/{date_yyyy}/{date_mm}/"
+      rename_template: "EXP_{date_yyyy_mm_dd}_{counter:5}"
+      bates_prefix: "EXP"
+
+  # Large Document Handling
+  - name: "Large Documents"
+    description: "Special handling for large documents"
+    priority: 45
+    enabled: true
+    conditions:
+      - type: "file_size"
+        value: 52428800  # 50MB
+        operator: "greater_than"
+    actions:
+      destination: "s3://document-bucket/large-files/{date_yyyy}/{date_mm}/"
+      rename_template: "LARGE_{date_yyyy_mm_dd}_{counter:4}"
+      bates_prefix: "LRG"
+
+  # Multi-page Document Processing
+  - name: "Multi-page Documents"
+    description: "Route documents with many pages for special processing"
+    priority: 40
+    enabled: true
+    conditions:
+      - type: "page_count"
+        value: 50
+        operator: "greater_than"
+      - type: "mime_type"
+        value: "application/pdf"
+        operator: "equals"
+    actions:
+      destination: "s3://document-bucket/multi-page/{date_yyyy}/"
+      rename_template: "MULTI_{date_yyyy_mm_dd}_{page_count}p_{counter:4}"
+      bates_prefix: "MULTI"
+
+  # Email Attachments
+  - name: "Email Attachments"
+    description: "Route email attachments based on content"
+    priority: 35
+    enabled: true
+    conditions:
+      - type: "filename_regex"
+        value: ".*(?i)(attachment|email).*"
+      - type: "keywords"
+        value: ["from:", "to:", "subject:", "sent:", "received:"]
+        operator: "any"
+        case_sensitive: false
+    actions:
+      destination: "s3://document-bucket/email-attachments/{date_yyyy}/{date_mm}/"
+      rename_template: "EMAIL_{date_yyyy_mm_dd}_{counter:5}"
+      bates_prefix: "EMAIL"
+
+  # Scanned Document Detection
+  - name: "Scanned Documents"
+    description: "Route scanned documents for OCR processing"
+    priority: 30
+    enabled: true
+    conditions:
+      - type: "has_text"
+        value: false
+      - type: "mime_type"
+        value: "application/pdf"
+        operator: "equals"
+    actions:
+      destination: "s3://document-bucket/scanned/{date_yyyy}/{date_mm}/"
+      rename_template: "SCAN_{date_yyyy_mm_dd}_{counter:5}"
+      bates_prefix: "SCAN"
+
+  # Image Documents
+  - name: "Image Documents"
+    description: "Route image files for processing"
+    priority: 25
+    enabled: true
+    conditions:
+      - type: "mime_type"
+        value: "image/"
+        operator: "contains"
+      - type: "file_extension"
+        value: ["jpg", "jpeg", "png", "tiff", "bmp"]
+        operator: "any"
+    actions:
+      destination: "s3://document-bucket/images/{date_yyyy}/{date_mm}/"
+      rename_template: "IMG_{date_yyyy_mm_dd}_{counter:5}"
+      bates_prefix: "IMG"
+
+  # Barcode/QR Code Documents
+  - name: "Barcode Documents"
+    description: "Route documents containing barcodes or QR codes"
+    priority: 20
+    enabled: true
+    conditions:
+      - type: "contains_barcode"
+        value: true
+    actions:
+      destination: "s3://document-bucket/barcode/{date_yyyy}/{date_mm}/"
+      rename_template: "BC_{date_yyyy_mm_dd}_{counter:5}"
+      bates_prefix: "BC"
+
+  # Default/Fallback Rule
+  - name: "Default Processing"
+    description: "Default rule for documents that don't match other rules"
+    priority: 10
+    enabled: true
+    conditions: []  # No conditions = matches everything
+    actions:
+      destination: "s3://document-bucket/general/{date_yyyy}/{date_mm}/"
+      rename_template: "DOC_{date_yyyy_mm_dd}_{counter:6}"
+      bates_prefix: "DOC"
+      continue_matching: false
+
+# Template Variables Available:
+# {date_yyyy_mm_dd} - Current date in YYYY-MM-DD format
+# {date_yyyy} - Current year
+# {date_mm} - Current month
+# {date_dd} - Current day
+# {time_hh_mm_ss} - Current time in HH-MM-SS format
+# {filename} - Original filename without extension
+# {extension} - File extension
+# {mime_type} - MIME type (with / replaced by _)
+# {file_size_mb} - File size in MB
+# {page_count} - Number of pages
+# {counter:N} - Sequential counter with N digits padding
+# {doc_type} - Detected document type
+# {language} - Detected language
+
+# Condition Types Available:
+# - filename_regex: Regular expression match against filename
+# - filename_contains: Check if filename contains text
+# - mime_type: Check MIME type
+# - file_extension: Check file extension
+# - keywords: Search for keywords in document text
+# - file_size: Compare file size (in bytes)
+# - page_count: Compare number of pages
+# - has_text: Check if document has extractable text
+# - language: Check detected language
+# - contains_barcode: Check if document contains barcodes/QR codes
+# - barcode_value: Check specific barcode content
+# - date_range: Check if document creation date is in range
+
+# Operators Available:
+# - equals, not_equals
+# - contains, not_contains
+# - starts_with, ends_with
+# - greater_than, less_than, greater_equal, less_equal
+# - any, all, none (for lists)
+
+# Destination Types:
+# - s3://bucket/prefix/ - Amazon S3
+# - sftp://server/path/ - SFTP server
+# - shopify:// - Shopify files
+# - local:///path/to/folder/ - Local file system

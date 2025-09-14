@@ -1,0 +1,97 @@
+version: '3.8'
+
+services:
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://postgres:password@db:5432/automated_docs
+      - REDIS_URL=redis://redis:6379/0
+    volumes:
+      - ./data:/app/data
+      - ./outputs:/app/outputs
+      - ./templates:/app/templates
+      - ./rules:/app/rules
+      - ./temp:/app/temp
+    depends_on:
+      - db
+      - redis
+    restart: unless-stopped
+    command: ["python", "-m", "app.main"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  worker:
+    build: .
+    environment:
+      - DATABASE_URL=postgresql://postgres:password@db:5432/automated_docs
+      - REDIS_URL=redis://redis:6379/0
+    volumes:
+      - ./data:/app/data
+      - ./outputs:/app/outputs
+      - ./templates:/app/templates
+      - ./rules:/app/rules
+      - ./temp:/app/temp
+    depends_on:
+      - db
+      - redis
+    restart: unless-stopped
+    command: ["celery", "-A", "app.worker", "worker", "--loglevel=info", "--concurrency=4"]
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  db:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_DB=automated_docs
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Optional: Flower for monitoring Celery tasks
+  flower:
+    build: .
+    ports:
+      - "5555:5555"
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      - redis
+    restart: unless-stopped
+    command: ["celery", "-A", "app.worker", "flower", "--port=5555"]
+    profiles:
+      - monitoring
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  default:
+    name: automated-docs-network
